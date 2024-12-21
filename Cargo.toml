@@ -1,7 +1,15 @@
 [package]
 name = "raquet"
 version = "0.1.0"
+authors = ["Bratish Goswami <bratishgoswami@gmail.com>"]
 edition = "2021"
+description = "A terminal-based HTTP client with TUI interface built in Rust"
+license = "MIT"
+repository = "https://github.com/bratish/raquet"
+documentation = "https://github.com/bratish/raquet"
+homepage = "https://github.com/bratish/raquet"
+keywords = ["http", "client", "tui", "terminal", "api"]
+categories = ["command-line-utilities", "development-tools"]
 
 [lib]
 name = "raquet"
