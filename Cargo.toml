@@ -1,0 +1,27 @@
+[package]
+name = "raquet"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "raquet"
+path = "src/lib.rs"
+
+[[bin]]
+name = "raquet"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.36", features = ["full"] }
+ratatui = "0.26.0"
+crossterm = "0.27.0"
+reqwest = { version = "0.11", features = ["json"] }
+anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+config = "0.14"
+directories = "5.0"
+toml = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
+itertools = "0.12"
+uuid = { version = "1.4", features = ["v4"] }
