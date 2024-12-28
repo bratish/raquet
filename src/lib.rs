@@ -15,6 +15,10 @@ mod tests {
 
 pub mod app;
 pub mod ui;
-pub mod config;
-pub mod history;
-pub mod collections;
+pub mod data;
+pub mod models;
+pub mod utils;
+
+// Re-export commonly used types
+pub use app::state::{App, HttpMethod};
+pub use data::{AppConfig, History, CollectionManager};

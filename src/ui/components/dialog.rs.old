@@ -1,0 +1,142 @@
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Paragraph, Clear},
+    style::{Color, Style},
+};
+use crate::app::{App, DialogFocus, DialogButtonFocus, CollectionDialogState};
+
+pub fn draw_dialog(f: &mut Frame, app: &mut App, area: Rect) {
+    match app.collection_dialog {
+        CollectionDialogState::NewCollection => {
+            let dialog_area = centered_rect(60, 12, area);
+            let dialog_chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Length(3),  // Name field
+                    Constraint::Length(5),  // Description field
+                    Constraint::Length(3),  // Buttons
+                ])
+                .margin(1)
+                .split(dialog_area);
+
+            // Draw dialog background
+            let dialog_block = Block::default()
+                .title("New Collection")
+                .borders(Borders::ALL);
+            f.render_widget(Clear, dialog_area);
+            f.render_widget(dialog_block, dialog_area);
+
+            // Draw name input field
+            let name_style = if app.dialog_focus == DialogFocus::Name {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+            let name_input = Paragraph::new(app.new_collection_name.as_str())
+                .block(Block::default()
+                    .title("Name")
+                    .borders(Borders::ALL)
+                    .border_style(name_style));
+            f.render_widget(name_input, dialog_chunks[0]);
+
+            // Draw description input field
+            let desc_style = if app.dialog_focus == DialogFocus::Description {
+                Style::default().fg(Color::Yellow)
+            } else {
+                Style::default()
+            };
+            let desc_input = Paragraph::new(app.new_collection_description.as_str())
+                .block(Block::default()
+                    .title("Description")
+                    .borders(Borders::ALL)
+                    .border_style(desc_style))
+                .wrap(ratatui::widgets::Wrap { trim: true })
+                .scroll((app.description_scroll, 0));
+            f.render_widget(desc_input, dialog_chunks[1]);
+
+            // Draw buttons
+            let buttons = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage(50),
+                    Constraint::Percentage(50),
+                ])
+                .split(dialog_chunks[2]);
+
+            let save_button = Paragraph::new("[ Save ]")
+                .alignment(Alignment::Center)
+                .block(Block::default().borders(Borders::ALL))
+                .style(Style::default().fg(
+                    if app.dialog_focus == DialogFocus::Buttons && app.dialog_button_focus == DialogButtonFocus::Save {
+                        Color::Yellow
+                    } else {
+                        Color::Green
+                    }
+                ));
+
+            let cancel_button = Paragraph::new("[ Cancel ]")
+                .alignment(Alignment::Center)
+                .block(Block::default().borders(Borders::ALL))
+                .style(Style::default().fg(
+                    if app.dialog_focus == DialogFocus::Buttons && app.dialog_button_focus == DialogButtonFocus::Cancel {
+                        Color::Yellow
+                    } else {
+                        Color::White
+                    }
+                ));
+
+            f.render_widget(save_button, buttons[0]);
+            f.render_widget(cancel_button, buttons[1]);
+
+            // Show cursor in text fields
+            match app.dialog_focus {
+                DialogFocus::Name => {
+                    f.set_cursor(
+                        dialog_chunks[0].x + app.new_collection_name.len() as u16 + 1,
+                        dialog_chunks[0].y + 1,
+                    );
+                }
+                DialogFocus::Description => {
+                    let current_line = app.new_collection_description.matches('\n').count() as u16;
+                    let last_line = app.new_collection_description
+                        .split('\n')
+                        .last()
+                        .map(|line| line.len())
+                        .unwrap_or(0);
+
+                    let visible_height = dialog_chunks[1].height.saturating_sub(2);
+                    if current_line >= visible_height + app.description_scroll {
+                        app.description_scroll = current_line.saturating_sub(visible_height) + 1;
+                    }
+
+                    f.set_cursor(
+                        dialog_chunks[1].x + last_line as u16 + 1,
+                        dialog_chunks[1].y + 1 + current_line.saturating_sub(app.description_scroll),
+                    );
+                }
+                _ => {}
+            }
+        }
+        _ => {}
+    }
+}
+
+fn centered_rect(percent_x: u16, height: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length((r.height.saturating_sub(height)) / 2),
+            Constraint::Length(height),
+            Constraint::Min(0),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
+}
