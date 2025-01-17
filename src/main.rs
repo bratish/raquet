@@ -1,17 +1,31 @@
 use anyhow::Result;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::prelude::*;
 use std::io;
+use std::fs::OpenOptions;
+use env_logger::{Builder, WriteStyle};
 
-use raquet::app::{App, InputMode, Field};
+use raquet::app::App;
 use raquet::ui;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Setup logging to file
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("raquet.log")?;
+
+    Builder::new()
+        .target(env_logger::Target::Pipe(Box::new(log_file)))
+        .write_style(WriteStyle::Always)
+        .filter_level(log::LevelFilter::Debug)
+        .init();
+
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -41,28 +55,16 @@ async fn main() -> Result<()> {
 
 async fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> Result<()> {
     loop {
-        terminal.draw(|f| ui::draw(f, &mut app))?;
-
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => {
-                    if app.input_mode == InputMode::Normal {
-                        return Ok(());
-                    } else {
-                        app.handle_key(key);
+        if event::poll(std::time::Duration::from_millis(16))? {
+            if let Event::Key(key) = event::read()? {
+                if key.kind == KeyEventKind::Press {
+                    if app.handle_key(key).await {
+                        break;
                     }
-                }
-                KeyCode::Enter => {
-                    if app.input_mode == InputMode::Normal && app.active_field == Field::SendButton {
-                        app.send_request().await;
-                    } else if app.handle_key(key) {
-                        return Ok(());
-                    }
-                }
-                _ => {
-                    app.handle_key(key);
                 }
             }
         }
+        terminal.draw(|f| ui::draw(f, &mut app))?;
     }
+    Ok(())
 } 
