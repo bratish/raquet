@@ -162,5 +162,41 @@ fn draw_send_button(f: &mut Frame, app: &App, area: Rect) {
 }
 
 pub fn draw_request_body(f: &mut Frame, app: &mut App, area: Rect) {
-    // ... existing code ...
+    let body_block = Block::default()
+        .title("Request Body")
+        .borders(Borders::ALL)
+        .border_style(style_for_field(Field::RequestBody, app));
+
+    let body = if app.input_mode == InputMode::Editing(Field::RequestBody) {
+        let body_chars: Vec<char> = app.body.chars().collect();
+        let pos = app.cursor_position.min(body_chars.len());
+        
+        let mut styled_spans = Vec::new();
+        
+        // Text before cursor
+        if pos > 0 {
+            styled_spans.push(Span::raw(body_chars[..pos].iter().collect::<String>()));
+        }
+        
+        // Cursor
+        if pos < body_chars.len() {
+            styled_spans.push(Span::styled(
+                body_chars[pos].to_string(),
+                Style::default().bg(Color::Yellow)
+            ));
+            
+            // Text after cursor
+            if pos + 1 < body_chars.len() {
+                styled_spans.push(Span::raw(body_chars[pos + 1..].iter().collect::<String>()));
+            }
+        } else {
+            styled_spans.push(Span::styled(" ", Style::default().bg(Color::Yellow)));
+        }
+        
+        Paragraph::new(Line::from(styled_spans))
+    } else {
+        Paragraph::new(app.body.as_str())
+    };
+
+    f.render_widget(body.block(body_block), area);
 }
