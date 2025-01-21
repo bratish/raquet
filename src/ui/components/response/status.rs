@@ -2,7 +2,6 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Paragraph},
     style::{Color, Style},
-    text::{Line, Span},
 };
 use crate::app::App;
 
@@ -11,61 +10,28 @@ pub fn draw_response_status(f: &mut Frame, app: &mut App, area: Rect) {
         .title("Status")
         .borders(Borders::ALL);
 
-    let lines = match &app.response_metadata {
-        Some(metadata) => {
-            let status = metadata.status.to_string();
-            let status_text = metadata.status_text
-                .replace(&status, "")
-                .trim()
-                .to_string();
-            let status_color = if status.starts_with('2') {
-                Color::Green
-            } else if status.starts_with('4') || status.starts_with('5') {
-                Color::Red
-            } else {
-                Color::Yellow
-            };
-
-            vec![
-                Line::from(vec![
-                    Span::raw("Status: "),
-                    Span::styled(
-                        format!("{} {}", status, status_text),
-                        Style::default().fg(status_color)
-                    ),
-                ]),
-                Line::from(vec![
-                    Span::raw("Time: "),
-                    Span::raw(format!("{}ms", metadata.time_ms)),
-                ]),
-                Line::from(vec![
-                    Span::raw("Size: "),
-                    Span::raw(format_size(metadata.size_bytes)),
-                ]),
-            ]
+    let status_style = if let Some(metadata) = &app.response_metadata {
+        match metadata.status {
+            s if s >= 200 && s < 300 => Style::default().fg(Color::Green),
+            s if s >= 300 && s < 400 => Style::default().fg(Color::Blue),
+            s if s >= 400 && s < 500 => Style::default().fg(Color::Yellow),
+            s if s >= 500 => Style::default().fg(Color::Red),
+            _ => Style::default(),
         }
-        None => vec![
-            Line::from("Status: No response"),
-            Line::from("Time: -"),
-            Line::from("Size: -"),
-        ],
+    } else {
+        Style::default()
     };
 
-    let status = Paragraph::new(lines)
+    let status_text = if let Some(metadata) = &app.response_metadata {
+        format!("{} {}", metadata.status, metadata.status_text)
+    } else {
+        "No response".to_string()
+    };
+
+    let status = Paragraph::new(status_text)
         .block(status_block)
-        .alignment(Alignment::Left);
+        .style(status_style)
+        .alignment(Alignment::Center);
 
     f.render_widget(status, area);
-}
-
-fn format_size(size: usize) -> String {
-    if size < 1024 {
-        format!("{} B", size)
-    } else if size < 1024 * 1024 {
-        format!("{:.1} KB", size as f64 / 1024.0)
-    } else if size < 1024 * 1024 * 1024 {
-        format!("{:.1} MB", size as f64 / (1024.0 * 1024.0))
-    } else {
-        format!("{:.1} GB", size as f64 / (1024.0 * 1024.0 * 1024.0))
-    }
 } 

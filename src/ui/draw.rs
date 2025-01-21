@@ -7,7 +7,7 @@ use crate::app::{App, Field, NavItem};
 use super::components::{
     self, draw_collections, draw_history, draw_headers, 
     draw_request, draw_request_body, draw_response_headers, 
-    draw_response_body, draw_save_dialog,
+    draw_response_body, draw_save_dialog, draw_response_status,
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -67,12 +67,45 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_headers(f, app, request_sections[0]);
     draw_request_body(f, app, request_sections[1]);
 
-    // Draw response section with divider
+    // Draw response section with divider and status
     let response_area = {
+        let title = if let Some(metadata) = &app.response_metadata {
+            let status_style = match metadata.status {
+                s if s >= 200 && s < 300 => Style::default().fg(Color::Green),
+                s if s >= 300 && s < 400 => Style::default().fg(Color::Blue),
+                s if s >= 400 && s < 500 => Style::default().fg(Color::Yellow),
+                s if s >= 500 => Style::default().fg(Color::Red),
+                _ => Style::default(),
+            };
+
+            let size = if metadata.size_bytes < 1024 {
+                format!("{}B", metadata.size_bytes)
+            } else if metadata.size_bytes < 1024 * 1024 {
+                format!("{:.1}KB", metadata.size_bytes as f64 / 1024.0)
+            } else {
+                format!("{:.1}MB", metadata.size_bytes as f64 / (1024.0 * 1024.0))
+            };
+
+            Line::from(vec![
+                Span::raw("[ "),
+                Span::styled(
+                    format!("{} {}  ", metadata.status, metadata.status_text),
+                    status_style
+                ),
+                Span::raw(format!("{}ms  ", metadata.time_ms)),
+                Span::raw(format!("{}", size)),
+                Span::raw(" ]"),
+            ])
+        } else {
+            Line::from("")
+        };
+
         let response_block = Block::default()
             .title("Response")
             .title_alignment(Alignment::Left)
-            .borders(Borders::TOP)  // Only show top border as divider
+            .title(title)
+            .title_alignment(Alignment::Right)
+            .borders(Borders::TOP)
             .border_style(Style::default())
             .style(Style::default());
         
@@ -80,17 +113,17 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         response_block.inner(content_layout[1])
     };
 
-    // Split response area into left column and body
-    let response_layout = Layout::default()
+    // Remove the status section and just split for headers and body
+    let response_content = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(30), // Left column (status + headers)
-            Constraint::Percentage(70), // Response body
+            Constraint::Percentage(30),
+            Constraint::Percentage(70),
         ])
         .split(response_area);
 
-    draw_response_headers(f, app, response_layout[0]);
-    draw_response_body(f, app, response_layout[1]);
+    draw_response_headers(f, app, response_content[0]);
+    draw_response_body(f, app, response_content[1]);
 
     // Draw save dialog on top if visible
     if app.save_dialog_visible {
