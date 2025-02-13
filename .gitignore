@@ -1,1 +1,7 @@
 /target
+.idea
+.vscode
+.vscode/*
+.cursor
+.DS_Store
+

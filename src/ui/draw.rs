@@ -1,13 +1,14 @@
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, List, ListItem},
+    widgets::{Block, Borders, List, ListItem, Clear},
     style::{Color, Style, Modifier},
 };
-use crate::app::{App, Field, NavItem};
+use crate::app::{App, Field, NavItem, HttpMethod};
 use super::components::{
     self, draw_collections, draw_history, draw_headers, 
     draw_request, draw_request_body, draw_response_headers, 
     draw_response_body, draw_save_dialog, draw_response_status,
+    draw_method_selector,
 };
 
 pub fn draw(f: &mut Frame, app: &mut App) {
@@ -125,6 +126,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     draw_response_headers(f, app, response_content[0]);
     draw_response_body(f, app, response_content[1]);
 
+    // Draw method selector
+    if app.show_method_selector {
+        draw_method_selector(f, app, f.size());
+    }
+
     // Draw save dialog on top if visible
     if app.save_dialog_visible {
         draw_save_dialog(f, app, f.size());
@@ -167,4 +173,24 @@ fn draw_nav_panel(f: &mut Frame, app: &mut App, area: Rect) {
         .highlight_style(Style::default().fg(Color::Yellow));
 
     f.render_widget(nav_list, area);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
