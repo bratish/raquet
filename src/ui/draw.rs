@@ -90,7 +90,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Line::from(vec![
                 Span::raw("[ "),
                 Span::styled(
-                    format!("{} {}  ", metadata.status, metadata.status_text),
+                    format!("{}  ", metadata.status_text),
                     status_style
                 ),
                 Span::raw(format!("{}ms  ", metadata.time_ms)),
@@ -101,14 +101,52 @@ pub fn draw(f: &mut Frame, app: &mut App) {
             Line::from("")
         };
 
-        let response_block = Block::default()
-            .title("Response")
-            .title_alignment(Alignment::Left)
-            .title(title)
-            .title_alignment(Alignment::Right)
-            .borders(Borders::TOP)
-            .border_style(Style::default())
-            .style(Style::default());
+        let response_block = if let Some(metadata) = &app.response_metadata {
+            let status_style = match metadata.status {
+                s if s >= 200 && s < 300 => Style::default().fg(Color::Green),
+                s if s >= 300 && s < 400 => Style::default().fg(Color::Blue),
+                s if s >= 400 && s < 500 => Style::default().fg(Color::Yellow),
+                s if s >= 500 => Style::default().fg(Color::Red),
+                _ => Style::default(),
+            };
+            let size = if metadata.size_bytes < 1024 {
+                format!("{}B", metadata.size_bytes)
+            } else if metadata.size_bytes < 1024 * 1024 {
+                format!("{:.1}KB", metadata.size_bytes as f64 / 1024.0)
+            } else {
+                format!("{:.1}MB", metadata.size_bytes as f64 / (1024.0 * 1024.0))
+            };
+            Block::default()
+                .title(Line::from(vec![
+                    Span::raw("─"),
+                    Span::raw(" "),
+                    Span::styled("Response", Style::default()),
+                    Span::raw(" "),
+                    Span::styled("─".repeat((content_layout[1].width as usize).saturating_sub(50)), Style::default()),
+                    Span::raw(" "),
+                    Span::raw("[ "),
+                    Span::styled(
+                        format!("{}  ", metadata.status_text),
+                        status_style
+                    ),
+                    Span::raw(format!("{}ms  ", metadata.time_ms)),
+                    Span::raw(format!("{}", size)),
+                    Span::raw(" ]"),
+                ]))
+                .borders(Borders::TOP)
+                .border_style(Style::default())
+        } else {
+            Block::default()
+                .title(Line::from(vec![
+                    Span::raw("─"),
+                    Span::raw(" "),
+                    Span::styled("Response", Style::default()),
+                    Span::raw(" "),
+                    Span::styled("─".repeat((content_layout[1].width as usize).saturating_sub(50)), Style::default()),
+                ]))
+                .borders(Borders::TOP)
+                .border_style(Style::default())
+        };
         
         f.render_widget(response_block.clone(), content_layout[1]);
         response_block.inner(content_layout[1])
